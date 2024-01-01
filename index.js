@@ -16,7 +16,7 @@ function secondsToMinutesSeconds(seconds) {
 }
 async function getSongs(folder) {
   currentFolder = folder;
-  let a = await fetch(`http://192.168.20.249:5500/${folder}/`);
+  let a = await fetch(`/${folder}/`);
   // console.log(await a.text());
   let response = await a.text();
   // console.log(response);
@@ -32,6 +32,7 @@ async function getSongs(folder) {
       songs.push(element.href.split(`/${folder}/`)[1]); //this will give me array of two so take the second element after "/songs/"
     }
   }
+
   //show all the list in the playlist
   let songUL = document.querySelector(".songList").querySelector(".ul"); //or getElementByTagName("ul")[0] means first ul element of this tagname inside songlist
   songUL.innerHTML = "";
@@ -60,6 +61,8 @@ async function getSongs(folder) {
       playMusic(e.querySelector(".info").firstElementChild.innerHTML);
     });
   });
+
+  return songs;
 }
 const playMusic = (track, pause = false) => {
   // let audio = new Audio("/songs/" + track);
@@ -77,7 +80,7 @@ const playMusic = (track, pause = false) => {
 };
 
 async function displayAlbums() {
-  let a = await fetch(`http://192.168.20.249:5500/songs/`);
+  let a = await fetch(`/songs/`);
   // console.log(await a.text());
   let response = await a.text();
   let div = document.createElement("div");
@@ -90,18 +93,17 @@ async function displayAlbums() {
   for (let index = 0; index < array.length; index++) {
     const e = array[index];
     console.log(e.href);
-    if (e.href.includes("/songs/")) {
+    if (e.href.includes("/songs/") && !e.href.includes(".htaccess")) {
       console.log(e.href);
       console.log(e.href.split("/"));
       let folder = e.href.split("/").slice(4)[0];
       console.log(folder);
       //get the metadata of the folder
-      let a = await fetch(
-        `http://192.168.20.249:5500/songs/${folder}/info.json`
-      );
+      let a = await fetch(`/songs/${folder}/info.json`);
+      console.log(a);
       let response = await a.json();
       console.log(response);
-      cardContainer.innerHTML += `<div data-folder="cs" class="card">
+      cardContainer.innerHTML += `<div data-folder="${folder}" class="card">
       <div class="play">
         <svg
           width="16"
@@ -131,8 +133,13 @@ async function displayAlbums() {
   Array.from(document.getElementsByClassName("card")).forEach((e) => {
     console.log(e);
     e.addEventListener("click", async (item) => {
+      console.log("hi");
       console.log(item, item.currentTarget.dataset);
+      // songs = [];
+      console.log(`songs/${item.currentTarget.dataset.folder}`);
       songs = await getSongs(`songs/${item.currentTarget.dataset.folder}`); //current target instead of target because with help of cirrenttarget if you click element inside the card be it img, h or p tag it will give you the event of card
+
+      playMusic(songs[0]);
     });
   });
 }
@@ -211,6 +218,7 @@ async function main() {
     .querySelector(".range")
     .getElementsByTagName("input")[0]
     .addEventListener("change", (e) => {
+      console.log(e);
       console.log(typeof e.target.value);
       console.log(parseInt(e.target.value) / 100);
 
@@ -218,10 +226,31 @@ async function main() {
     });
   //add event listener to mute the song
   document.querySelector(".mute").addEventListener("click", (e) => {
+    console.log(e);
+
+    //in if block e.target.src=="volume.svg"..this will not work because value of e.targer.src is "http://192.168.137.1:5/img/volume.svg" and not "voume.svg"
+
     if (e.target.src.includes("volume.svg")) {
+      //e.target.src.replace("volume.svg","mute.svg") will not work because strings are immutable that is why e.target.src = e.target.src.replace
       e.target.src = e.target.src.replace("volume.svg", "mute.svg");
       currentsong.volume = 0;
+      document
+        .querySelector(".range")
+        .getElementsByTagName("input")[0].value = 0;
+    } else {
+      e.target.src = e.target.src.replace("mute.svg", "volume.svg");
+      currentsong.volume = 0.1;
+      document
+        .querySelector(".range")
+        .getElementsByTagName("input")[0].value = 10;
     }
   });
 }
 main();
+document.addEventListener(
+  "contextmenu",
+  function (e) {
+    e.preventDefault();
+  },
+  false
+);
